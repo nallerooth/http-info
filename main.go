@@ -8,6 +8,8 @@ import (
 	"net/http/httptrace"
 	"os"
 	"time"
+
+	"github.com/nallerooth/http-info/cert"
 )
 
 func printLabelValue(indent, label, value string) {
@@ -29,7 +31,8 @@ func printTLSInfo(cs *tls.ConnectionState) {
 		}
 		//printLabelValue(indent, "SignatureAlgorithm", fmt.Sprintf("%s", c.SignatureAlgorithm))
 		printLabelValue(indent, "NotBefore", fmt.Sprintf("%s", c.NotBefore))
-		printLabelValue(indent, "NotAfter", fmt.Sprintf("%s", c.NotAfter))
+		notAfterRemaining := fmt.Sprintf("(%d days remaining)", cert.CalcRemainingDays(c.NotAfter))
+		printLabelValue(indent, "NotAfter", fmt.Sprintf("%s %s", c.NotAfter, notAfterRemaining))
 		fmt.Println()
 	}
 }
