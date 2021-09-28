@@ -18,18 +18,25 @@ func printLabelValue(indent, label, value string) {
 
 func printTLSInfo(cs *tls.ConnectionState) {
 	indent := "\t"
-	//fmt.Printf("%sTLS: %+v\n", indent, cs)
 
 	fmt.Println("Certificates")
 	printLabelValue(indent, "ServerName", cs.ServerName)
+	printLabelValue(indent, "Protocol", cs.NegotiatedProtocol)
 	fmt.Println()
 	for _, c := range cs.PeerCertificates {
 		printLabelValue(indent, "Issuer", fmt.Sprintf("%s", c.Issuer))
 		printLabelValue(indent, "IsCA", fmt.Sprintf("%t", c.IsCA))
 		if c.IsCA == false {
-			printLabelValue(indent, "DNSNames", fmt.Sprintf("%s", c.DNSNames))
+			if len(c.DNSNames) > 1 {
+				printLabelValue(indent, "DNSNames", c.DNSNames[0])
+				for _, name := range c.DNSNames[1:] {
+					printLabelValue(indent, "", name)
+				}
+			} else {
+				printLabelValue(indent, "DNSNames", c.DNSNames[0])
+			}
 		}
-		//printLabelValue(indent, "SignatureAlgorithm", fmt.Sprintf("%s", c.SignatureAlgorithm))
+		printLabelValue(indent, "Algorithm", fmt.Sprintf("%s", c.SignatureAlgorithm))
 		printLabelValue(indent, "NotBefore", fmt.Sprintf("%s", c.NotBefore))
 		notAfterRemaining := fmt.Sprintf("(%d days remaining)", cert.CalcRemainingDays(c.NotAfter))
 		printLabelValue(indent, "NotAfter", fmt.Sprintf("%s %s", c.NotAfter, notAfterRemaining))
@@ -55,37 +62,50 @@ func timeGet(url string) {
 	var tlsConnectionState *tls.ConnectionState
 	var dnsDoneInfo *httptrace.DNSDoneInfo
 
-	indent := ""
+	var timeDNS, timeConn, timeTLS, timeTTFB time.Duration
 
+	fmt.Println("Timings")
+	indent := "\t"
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
 		DNSDone: func(ddi httptrace.DNSDoneInfo) {
 			dnsDoneInfo = &ddi
-			fmt.Printf("%sDNS Done: %v\n", indent, time.Since(dns))
+			timeDNS = time.Since(dns)
 		},
 
 		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
 		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
 			tlsConnectionState = &cs
-			fmt.Printf("TLS Handshake: %v\n", time.Since(tlsHandshake))
+			timeTLS = time.Since(tlsHandshake)
 		},
 
 		ConnectStart: func(network, addr string) { connect = time.Now() },
 		ConnectDone: func(network, addr string, err error) {
-			fmt.Printf("Connect time: %v\n", time.Since(connect))
+			timeConn = time.Since(connect)
 		},
 
 		GotFirstResponseByte: func() {
-			fmt.Printf("Time from start to first byte: %v\n", time.Since(start))
+			timeTTFB = time.Since(connect)
 		},
 	}
 
-	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 	start = time.Now()
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 	if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
-		log.Fatal(err)
+		log.Fatalln("Request Error:", err)
 	}
-	fmt.Printf("Total time: %v\n", time.Since(start))
+
+	if dnsDoneInfo.Err != nil {
+		log.Fatalln("DNS Error: ", dnsDoneInfo.Err)
+	}
+
+	printLabelValue(indent, "DNS", fmt.Sprintf("%v", timeDNS))
+	printLabelValue(indent, "Connect", fmt.Sprintf("%v", timeConn))
+	printLabelValue(indent, "TLS", fmt.Sprintf("%v", timeTLS))
+	printLabelValue(indent, "TTFB", fmt.Sprintf("%v", timeTTFB))
+
+	printLabelValue(indent, "Total", fmt.Sprintf("%v", time.Since(start)))
+	fmt.Println()
 
 	printDNSInfo(dnsDoneInfo)
 	printTLSInfo(tlsConnectionState)
