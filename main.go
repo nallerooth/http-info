@@ -3,10 +3,13 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httptrace"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/nallerooth/http-info/cert"
@@ -64,7 +67,6 @@ func timeGet(url string) {
 
 	var timeDNS, timeConn, timeTLS, timeTTFB time.Duration
 
-	fmt.Println("Timings")
 	indent := "\t"
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
@@ -91,13 +93,18 @@ func timeGet(url string) {
 
 	start = time.Now()
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
-	if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
+	res, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
 		log.Fatalln("Request Error:", err)
 	}
+	defer res.Body.Close()
 
 	if dnsDoneInfo.Err != nil {
 		log.Fatalln("DNS Error: ", dnsDoneInfo.Err)
 	}
+
+	printDNSInfo(dnsDoneInfo)
+	fmt.Println("Timings")
 
 	printLabelValue(indent, "DNS", fmt.Sprintf("%v", timeDNS))
 	printLabelValue(indent, "Connect", fmt.Sprintf("%v", timeConn))
@@ -107,8 +114,25 @@ func timeGet(url string) {
 	printLabelValue(indent, "Total", fmt.Sprintf("%v", time.Since(start)))
 	fmt.Println()
 
-	printDNSInfo(dnsDoneInfo)
-	printTLSInfo(tlsConnectionState)
+	fmt.Println("Transfer")
+	// Write response to /dev/null and count number of bytes written
+	dn, err := os.OpenFile(os.DevNull, os.O_WRONLY, os.FileMode(fs.ModeAppend))
+	if err != nil {
+		log.Fatalf("Error opening DevNull (%s): %s", os.DevNull, err)
+	}
+	defer dn.Close()
+	numBytes, err := io.Copy(dn, res.Body)
+	printLabelValue(indent, "Status", res.Status)
+	printLabelValue(indent, "Bytes", fmt.Sprintf("%d", numBytes))
+	printLabelValue(indent, "Compressed", fmt.Sprintf("%t", res.Uncompressed))
+	if len(res.TransferEncoding) > 0 {
+		printLabelValue(indent, "Encoding", strings.Join(res.TransferEncoding, ", "))
+	}
+	fmt.Println()
+
+	if tlsConnectionState != nil {
+		printTLSInfo(tlsConnectionState)
+	}
 }
 
 func main() {
@@ -118,7 +142,7 @@ func main() {
 	}
 
 	url := args[0]
+	fmt.Println()
 	timeGet(url)
-
 	fmt.Println("Done")
 }
