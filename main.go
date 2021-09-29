@@ -161,7 +161,8 @@ func timeGet(url string) {
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		panic("Missing arguments")
+		fmt.Fprintf(os.Stderr, "Usage: %s https://domain.com\n", os.Args[0])
+		os.Exit(1)
 	}
 
 	url := args[0]
