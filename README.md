@@ -48,9 +48,11 @@ Done
 Developed in Go `1.16`.
 
 ```sh
+git clone git@github.com:nallerooth/http-info.git
+cd http-info
 go build
 ```
 or
 ```sh
-go install
+go install github.com/nallerooth/http-info@latest
 ```
