@@ -144,7 +144,7 @@ func timeGet(url string) {
 		307: true,
 	}
 	if redirects[res.StatusCode] && res.Header.Get("Location") != "" {
-		printLabelValue(indent, "Redirect", res.Header.Get("Location"))
+		printLabelValue(indent, "Redirect", colors.Green(res.Header.Get("Location")))
 	}
 	printLabelValue(indent, "Bytes", fmt.Sprintf("%d", numBytes))
 	printLabelValue(indent, "Compressed", fmt.Sprintf("%t", res.Uncompressed))
