@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/nallerooth/http-info/cert"
+	"github.com/nallerooth/http-info/colors"
 )
 
 func printLabelValue(indent, label, value string) {
@@ -41,7 +42,7 @@ func printTLSInfo(cs *tls.ConnectionState) {
 		}
 		printLabelValue(indent, "Algorithm", fmt.Sprintf("%s", c.SignatureAlgorithm))
 		printLabelValue(indent, "NotBefore", fmt.Sprintf("%s", c.NotBefore))
-		notAfterRemaining := fmt.Sprintf("(%d days remaining)", cert.CalcRemainingDays(c.NotAfter))
+		notAfterRemaining := fmt.Sprintf("[ %s ]", cert.CalcRemainingDaysColor(c.NotAfter))
 		printLabelValue(indent, "NotAfter", fmt.Sprintf("%s %s", c.NotAfter, notAfterRemaining))
 		fmt.Println()
 	}
@@ -122,7 +123,20 @@ func timeGet(url string) {
 	}
 	defer dn.Close()
 	numBytes, err := io.Copy(dn, res.Body)
-	printLabelValue(indent, "Status", res.Status)
+
+	colorFn := colors.White
+	switch {
+	case res.StatusCode >= 400:
+		colorFn = colors.Red
+	case res.StatusCode >= 300:
+		colorFn = colors.Yellow
+	case res.StatusCode >= 200:
+		colorFn = colors.Green
+	case res.StatusCode >= 100:
+		colorFn = colors.Purple
+	}
+
+	printLabelValue(indent, "Status", colorFn(res.Status))
 	printLabelValue(indent, "Bytes", fmt.Sprintf("%d", numBytes))
 	printLabelValue(indent, "Compressed", fmt.Sprintf("%t", res.Uncompressed))
 	if len(res.TransferEncoding) > 0 {
