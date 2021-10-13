@@ -20,6 +20,37 @@ func printLabelValue(indent, label, value string) {
 	fmt.Printf("%s%-10s: %s\n", indent, label, value)
 }
 
+func printReponseHeaders(indent string, headers map[string][]string) {
+	// Grab longest header name
+	maxHeaderName := 0
+	for h := range headers {
+		if len(h) > maxHeaderName {
+			maxHeaderName = len(h)
+		}
+	}
+
+	fmt.Println("Headers")
+	for k, values := range headers {
+		if len(values) == 1 {
+			fmt.Printf("%s%-*s: ", indent, maxHeaderName, k)
+			fmt.Println(values[0])
+		} else {
+			fmt.Printf("%s%s ", indent, k)
+			for i, v := range values {
+				if i == 0 {
+					fmt.Println()
+				} else if i < len(values)-1 {
+					fmt.Printf("%s ├── %s\n", indent, v)
+				} else {
+					fmt.Printf("%s └── %s\n", indent, v)
+				}
+			}
+
+		}
+	}
+	fmt.Println()
+}
+
 func transferSize(numBytes int64) string {
 	units := []string{"B", "KB", "MB", "GB"}
 	unitIndex := 0
@@ -168,6 +199,9 @@ func timeGet(url string) {
 		printLabelValue(indent, "Encoding", strings.Join(res.TransferEncoding, ", "))
 	}
 	fmt.Println()
+
+	// TODO: Check flag if headers are wanted
+	printReponseHeaders(indent, res.Header)
 
 	if tlsConnectionState != nil {
 		printTLSInfo(tlsConnectionState)
