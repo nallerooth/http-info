@@ -32,14 +32,11 @@ func printReponseHeaders(indent string, headers map[string][]string) {
 	fmt.Println("Headers")
 	for k, values := range headers {
 		if len(values) == 1 {
-			fmt.Printf("%s%-*s: ", indent, maxHeaderName, k)
-			fmt.Println(values[0])
+			fmt.Printf("%s%-*s: %s\n", indent, maxHeaderName, k, values[0])
 		} else {
-			fmt.Printf("%s%s ", indent, k)
+			fmt.Printf("%s%s\n", indent, k)
 			for i, v := range values {
-				if i == 0 {
-					fmt.Println()
-				} else if i < len(values)-1 {
+				if i < len(values)-1 {
 					fmt.Printf("%s ├── %s\n", indent, v)
 				} else {
 					fmt.Printf("%s └── %s\n", indent, v)
