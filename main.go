@@ -20,6 +20,18 @@ func printLabelValue(indent, label, value string) {
 	fmt.Printf("%s%-10s: %s\n", indent, label, value)
 }
 
+func transferSize(numBytes int64) string {
+	units := []string{"B", "KB", "MB", "GB"}
+	unitIndex := 0
+	b := float64(numBytes)
+	for b > 1024 && unitIndex < len(units) {
+		b /= 1024
+		unitIndex++
+	}
+
+	return fmt.Sprintf("%.2f %s", b, units[unitIndex])
+}
+
 func printTLSInfo(cs *tls.ConnectionState) {
 	indent := "\t"
 
@@ -146,7 +158,7 @@ func timeGet(url string) {
 	if redirects[res.StatusCode] && res.Header.Get("Location") != "" {
 		printLabelValue(indent, "Redirect", colors.Green(res.Header.Get("Location")))
 	}
-	printLabelValue(indent, "Bytes", fmt.Sprintf("%d", numBytes))
+	printLabelValue(indent, "Bytes", transferSize(numBytes))
 	printLabelValue(indent, "Compressed", fmt.Sprintf("%t", res.Uncompressed))
 	if len(res.TransferEncoding) > 0 {
 		printLabelValue(indent, "Encoding", strings.Join(res.TransferEncoding, ", "))
