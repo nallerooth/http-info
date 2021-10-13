@@ -29,6 +29,10 @@ func transferSize(numBytes int64) string {
 		unitIndex++
 	}
 
+	if unitIndex == 0 {
+		return fmt.Sprintf("%d %s", numBytes, units[unitIndex])
+	}
+
 	return fmt.Sprintf("%.2f %s", b, units[unitIndex])
 }
 
